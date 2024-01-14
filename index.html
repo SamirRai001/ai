@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-enabled Web App</title>
+</head>
+<body>
+    <h1>Voice-enabled Web App</h1>
+    
+    <p id="transcription">Transcription will appear here...</p>
+
+    <script>
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.interimResults = true;
+
+        let transcription = '';
+        let lastResponseTime = Date.now(); // Record the time of the last response
+
+        recognition.onstart = () => {
+            console.log('Speech recognition started');
+        };
+
+        recognition.onresult = (event) => {
+            const currentTranscription = Array.from(event.results)
+                .map(result => result[0].transcript)
+                .join('');
+
+            document.getElementById('transcription').textContent = currentTranscription;
+
+            if (event.results[0].isFinal) {
+                transcription += currentTranscription + ' ';
+                
+                const currentTime = Date.now();
+                const timeSinceLastResponse = currentTime - lastResponseTime;
+
+                if (timeSinceLastResponse > 5000) {
+                    handleUserInput(currentTranscription);
+                    lastResponseTime = currentTime;
+                }
+            }
+        };
+
+        recognition.onend = () => {
+            console.log('Speech recognition ended');
+            // Restart recognition after it ends
+            recognition.start();
+        };
+
+        window.addEventListener('load', () => {
+            startSpeechRecognition();
+        });
+
+        function startSpeechRecognition() {
+            recognition.start();
+        }
+
+        function storeUserInput(input) {
+            // Add your logic for storing user input here
+            console.log('User said:', input);
+        }
+
+        function respond(message) {
+            const utterance = new SpeechSynthesisUtterance(message);
+
+            // Check for available voices
+            const availableVoices = window.speechSynthesis.getVoices();
+
+            // Find a neutral voice (you can choose a specific voice that sounds neutral)
+            const neutralVoice = availableVoices.find(voice => voice.lang.includes('en') && voice.name.includes('Google'));
+
+            if (neutralVoice) {
+                utterance.voice = neutralVoice;
+            }
+
+            utterance.onend = () => {
+                // Restart recognition after the text-to-speech has finished
+                recognition.start();
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+    <script src="reply.js"></script>
+</body>
+</html>
